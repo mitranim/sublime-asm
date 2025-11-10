@@ -3,7 +3,7 @@
 <dict>
   <key>scope</key>
   <string>
-    entity.name.label.goasm
+    entity.name.label.asm
   </string>
   <key>settings</key>
   <dict>

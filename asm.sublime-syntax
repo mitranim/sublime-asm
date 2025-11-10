@@ -1,0 +1,433 @@
+%YAML 1.2
+---
+version: 2
+scope: source.asm
+
+file_extensions:
+  - s
+  - asm
+  - goasm
+
+variables:
+  comment_line_begin: (?://|;)
+  comment_block_begin: /\*
+  comment_block_end: \*/
+
+  quote_single: \'
+  quote_double: \"
+  quote_backtick: \`
+
+  # Some assemblers support or require `#` or `$` before immediates.
+  num_pre: '[#$]'
+  exponent: '(?:e[+-]?)'
+  int_bin: '[0-1][0-1_]*'
+  int_oct: '[0-7][0-7_]*'
+  int_dec: '[0-9][0-9_]*'
+  int_hex: '[0-9a-f][0-9a-f_]*'
+
+  oper_chars: '\~\!\@\#\$\%\^\&\*\:\<\>\?\/\\\|\=\+\-'
+  oper: '\b[{{oper_chars}}]+\b'
+
+  ident_chars: \w
+  ident_lax: '\b[{{ident_chars}}]+\b'
+  ident_ext: '\b[{{ident_chars}}.]+\b'
+  ident_strict: '\b[A-Za-z_][{{ident_chars}}]*\b'
+  ident_strict_ext: '\b[A-Za-z_][{{ident_chars}}.]*\b'
+
+  dot: (?:[.·])
+  eol: (?:\n|$)
+
+contexts:
+  prototype:
+    - include: comment
+
+  main:
+    # Treat first-line shebang as comment.
+    - match: ^(#!?).*
+      scope: comment.line.preface.goasm
+      captures:
+        1: punctuation.definition.comment.begin.goasm
+      set: any
+    - match: ''
+      set: any
+
+  comment:
+    - include: comment-line
+    - include: comment-block
+
+  # Many assemblers support both `//` and `;` comments.
+  # The Go assembler supports `//` and forbids `;`.
+  comment-line:
+    - match: '{{comment_line_begin}}'
+      scope: punctuation.definition.comment.asm
+      push: [comment-line-pop, comment-heading-pop]
+
+  comment-line-pop:
+    - meta_scope: comment.line.asm
+    - meta_include_prototype: false
+    - match: '{{eol}}'
+      pop: 1
+
+  comment-block:
+    - match: '{{comment_block_begin}}'
+      scope: punctuation.definition.comment.begin.asm
+      push: [comment-block-pop, comment-heading-pop]
+
+  comment-block-pop:
+    - meta_scope: comment.block.asm
+    - meta_include_prototype: false
+    - match: '{{comment_block_end}}'
+      scope: punctuation.definition.comment.end.asm
+      pop: 1
+    - include: comment-heading
+
+  comment-heading-pop:
+    - match: \s*((#+)\s+.*?)(?={{eol}}|{{comment_block_end}})
+      captures:
+        1: entity.name.section.asm markup.heading
+        2: punctuation.definition.heading.begin.asm
+      pop: 1
+    - include: now-pop
+
+  comment-heading:
+    - match: ^\s*((#+)\s+.*?)(?={{eol}}|{{comment_block_end}})
+      captures:
+        1: entity.name.section.asm markup.heading
+        2: punctuation.definition.heading.begin.asm
+
+  any:
+    - include: prepro
+    - include: punc
+    - include: str
+    - include: num
+    - include: oper
+    - include: ident
+
+  prepro:
+    - include: prepro-define
+    - include: prepro-any
+
+  prepro-define:
+    - match: ^\s*(#)\s*(define)\s+({{ident_lax}})
+      scope: meta.annotation.asm
+      captures:
+        1: storage.modifier.asm
+        2: keyword.asm
+        3: entity.name.macro.asm
+
+  prepro-any:
+    - match: ^\s*(#)\s*({{ident_lax}})
+      scope: meta.annotation.asm
+      captures:
+        1: storage.modifier.asm
+        2: keyword.asm
+
+  punc:
+    - include: directives
+    - include: delim
+    - include: dot
+    - include: comma
+
+  delim:
+    - include: paren
+    - include: bracket
+    - include: brace
+
+  paren:
+    - match: \)
+      scope: punctuation.section.parens.end.asm invalid.illegal.asm
+      pop: false
+    - match: \(
+      scope: punctuation.section.parens.begin.asm
+      set: paren-inner
+
+  paren-inner:
+    - meta_scope: meta.parens.asm
+    - include: paren-pop
+    - include: any
+
+  paren-pop:
+    - match: \)
+      scope: punctuation.section.parens.end.asm
+      pop: 1
+
+  bracket:
+    - match: \]
+      scope: punctuation.section.brackets.end.asm invalid.illegal.asm
+      pop: false
+    - match: \[
+      scope: punctuation.section.brackets.begin.asm
+      set: bracket-inner
+
+  bracket-inner:
+    - meta_scope: meta.brackets.asm
+    - include: bracket-pop
+    - include: any
+
+  bracket-pop:
+    - match: \]
+      scope: punctuation.section.brackets.end.asm
+      pop: 1
+
+  brace:
+    - match: \}
+      scope: punctuation.section.braces.end.asm invalid.illegal.asm
+      pop: false
+    - match: \{
+      scope: punctuation.section.braces.begin.asm
+      set: brace-inner
+
+  brace-inner:
+    - meta_scope: meta.braces.asm
+    - include: brace-pop
+    - include: any
+
+  brace-pop:
+    - match: \}
+      scope: punctuation.section.braces.end.asm
+      pop: 1
+
+  dot:
+    - match: '{{dot}}'
+      scope: punctuation.accessor.asm
+
+  comma:
+    - match: ','
+      scope: punctuation.comma.asm
+
+  str:
+    - include: str-single
+    - include: str-double
+    - include: str-backtick
+
+  str-single:
+    - include: str-single-empty
+    - include: str-single-fenced
+
+  str-single-empty:
+    - match: '({{quote_single}})({{quote_single}})(?!{{quote_single}})'
+      scope: string.quoted.other.asm
+      captures:
+        1: punctuation.definition.string.begin.asm
+        2: punctuation.definition.string.end.asm
+
+  str-single-fenced:
+    # The capturing parens allow us to backreference this via `\1`.
+    - match: '({{quote_single}}+)'
+      scope: string.quoted.other.asm punctuation.definition.string.begin.asm
+      set: [str-single-meta, str-pop]
+
+  str-single-meta:
+    - meta_content_scope: string.quoted.single.asm
+    - include: now-pop
+
+  str-double:
+    - include: str-double-empty
+    - include: str-double-fenced
+
+  str-double-empty:
+    - match: '({{quote_double}})({{quote_double}})(?!{{quote_double}})'
+      scope: string.quoted.other.asm
+      captures:
+        1: punctuation.definition.string.begin.asm
+        2: punctuation.definition.string.end.asm
+      pop: 1
+
+  str-double-fenced:
+    - match: '({{quote_double}}+)'
+      scope: string.quoted.double.asm punctuation.definition.string.begin.asm
+      set: [str-double-meta, str-pop]
+
+  str-double-meta:
+    - meta_content_scope: string.quoted.double.asm
+    - include: now-pop
+
+  str-backtick:
+    - include: str-backtick-empty
+    - include: str-backtick-fenced
+
+  str-backtick-empty:
+    - match: '({{quote_backtick}})({{quote_backtick}})(?!{{quote_backtick}})'
+      scope: string.quoted.other.asm
+      captures:
+        1: punctuation.definition.string.begin.asm
+        2: punctuation.definition.string.end.asm
+
+  str-backtick-fenced:
+    - match: '({{quote_backtick}}+)'
+      scope: string.quoted.other.asm punctuation.definition.string.begin.asm
+      set: [str-backtick-meta, str-pop]
+
+  str-backtick-meta:
+    - meta_content_scope: string.quoted.other.asm
+    - include: now-pop
+
+  str-pop:
+    - meta_include_prototype: false
+    - match: \1
+      scope: punctuation.definition.string.end.asm
+      pop: 1
+    - include: str-escape
+
+  str-escape:
+    - match: \\(?:.|\n)
+      scope: constant.character.escape.asm
+
+  num:
+    - include: num-bin
+    - include: num-oct
+    - include: num-hex
+    - include: num-any
+
+  num-bin:
+    - match: (?i)({{num_pre}})?([+-])?(0b){{int_bin}}(?:(\.){{int_bin}})?(?:({{exponent}}){{int_bin}})?
+      scope: constant.numeric.binary.asm
+      captures:
+        1: storage.modifier.asm
+        2: keyword.operator.arithmetic.asm
+        3: punctuation.definition.numeric.binary.asm
+        4: punctuation.separator.numeric.binary.asm
+        5: punctuation.separator.exponent.asm
+      push: num-delim-pop
+
+  num-oct:
+    - match: (?i)({{num_pre}})?([+-])?(0o)(?:{{int_oct}}(?:(\.){{int_oct}})?)?(?:({{exponent}}){{int_oct}})?
+      scope: constant.numeric.octal.asm
+      captures:
+        1: storage.modifier.asm
+        2: keyword.operator.arithmetic.asm
+        3: punctuation.definition.numeric.octal.asm
+        4: punctuation.separator.numeric.octal.asm
+        5: punctuation.separator.exponent.asm
+      push: num-delim-pop
+
+  num-hex:
+    - match: (?i)({{num_pre}})?([+-])?(0x)(?:{{int_hex}}(?:(\.){{int_hex}})?)?
+      scope: constant.numeric.hexadecimal.asm
+      captures:
+        1: storage.modifier.asm
+        2: keyword.operator.arithmetic.asm
+        3: punctuation.definition.numeric.hexadecimal.asm
+        4: punctuation.separator.numeric.hexadecimal.asm
+      push: num-delim-pop
+
+  # Disassembly often contains implicitly-hexadecimal numeric literals.
+  # This means we can't assume that a number that _looks_ like a decimal
+  # is actually decimal.
+  #
+  # Also, Go disassembly from `-gcflags '-S'` contains inline base64,
+  # which may begin with a digit.
+  num-any:
+    - include: num-hex-implicit
+    - include: num-dec
+
+  num-hex-implicit:
+    - match: (?i){{int_hex}}(?!\S)
+      scope: constant.numeric.asm
+
+  num-dec:
+    - match: (?i)({{num_pre}})?([+-])?{{int_dec}}(?:(\.){{int_dec}})?(?:({{exponent}}){{int_dec}})?
+      scope: constant.numeric.asm
+      captures:
+        1: storage.modifier.asm
+        2: keyword.operator.arithmetic.asm
+        3: punctuation.separator.numeric.asm
+        4: punctuation.separator.exponent.asm
+
+  num-delim-pop:
+    - match: '{{ident_lax}}'
+      scope: invalid.illegal.mox
+      pop: 1
+    - match: ''
+      pop: 1
+
+  oper:
+    - include: oper-reg-pre
+    - include: oper-num-pre
+    - include: oper-any
+
+  oper-reg-pre:
+    - match: (\%){{ident_lax}}
+      scope: variable.register.asm
+      captures:
+        1: punctuation.definition.register.asm
+
+  oper-num-pre:
+    # May be followed by an unary operator followed by a digit.
+    # We just always scope these the same way for simplicity.
+    - match: '{{num_pre}}(?=\S)'
+      scope: punctuation.definition.asm
+
+  oper-any:
+    - match: '{{oper}}'
+      scope: keyword.operator.asm
+
+  ident:
+    - include: ident-decl-text
+    - include: ident-decl-stext
+    - include: ident-label
+    - include: ident-instr
+    - include: ident-any
+
+  ident-label:
+    - match: '^\s*({{ident_lax}})\s*(:)'
+      scope: meta.label.asm
+      captures:
+        1: entity.name.label.asm
+        2: punctuation.definition.label.asm
+
+  directives:
+    - include: directive-macro
+    - include: directive-any
+
+  directive-macro:
+    - match: (?<=^|\s)(\.)(macro)\b
+      captures:
+        1: punctuation.accessor.asm
+        2: keyword.declaration.asm
+      push: ident-decl-text-pop
+
+  directive-any:
+    - match: (?<=^|\s)(\.)({{ident_lax}})
+      captures:
+        1: punctuation.accessor.asm
+        2: keyword.asm
+
+  # Uses an "extended" identifier which may contain a dot,
+  # because some instruction names contain one.
+  ident-instr:
+    - match: ^\s*{{ident_strict_ext}}(?!\s+STEXT\b)
+      scope: variable.function.asm
+
+  ident-decl-text:
+    - match: (?i)(TEXT)\b
+      scope: keyword.declaration.function.asm
+      push: ident-decl-text-pop
+
+  ident-decl-text-pop:
+    - match: ({{ident_lax}})?({{dot}})
+      captures:
+        1: variable.other.asm
+        2: punctuation.accessor.dot.asm
+    - match: '{{ident_lax}}'
+      scope: entity.name.function.asm
+      pop: 1
+    - include: nonblank-pop
+
+  ident-decl-stext:
+    - match: (?i)({{ident_lax}})\s+(STEXT)\b
+      captures:
+        1: entity.name.function.asm
+        2: keyword.asm
+
+  ident-any:
+    - match: '{{ident_lax}}'
+      scope: variable.other.asm
+
+  nonblank-pop:
+    - match: (?=\S)
+      pop: 1
+
+  now-pop:
+    - match: ''
+      pop: 1
