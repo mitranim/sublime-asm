@@ -58,6 +58,15 @@ contexts:
   # Many assemblers support both `//` and `;` comments.
   # The Go assembler supports `//` and forbids `;`.
   comment-line:
+    - match: '(//)(go)(:)([A-Za-z_][A-Za-z0-9_]*)(?:\s+([^\s]+))?'
+      scope: comment.line.asm
+      captures:
+        1: meta.annotation.goasm punctuation.definition.comment.asm
+        2: meta.annotation.goasm meta.keyword.annotation.asm
+        3: meta.annotation.goasm meta.punctuation.accessor.colon.asm
+        4: meta.annotation.goasm meta.variable.function.asm
+        5: meta.annotation.goasm meta.annotation.parameters.asm
+
     - match: '{{comment_line_begin}}'
       scope: punctuation.definition.comment.asm
       push: [comment-line-pop, comment-heading-pop]
