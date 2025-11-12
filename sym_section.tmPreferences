@@ -3,14 +3,14 @@
 <dict>
   <key>scope</key>
   <string>
-    entity.name.macro.goasm
+    entity.name.section.asm
   </string>
   <key>settings</key>
   <dict>
     <key>showInSymbolList</key>
     <integer>1</integer>
     <key>symbolTransformation</key>
-    <string><![CDATA[/^/macro /]]></string>
+    <string><![CDATA[/^/section /]]></string>
   </dict>
 </dict>
 </plist>

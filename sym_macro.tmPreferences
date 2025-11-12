@@ -3,17 +3,14 @@
 <dict>
   <key>scope</key>
   <string>
-    entity.name.function.goasm,
-    meta.function.declaration.goasm
+    entity.name.macro.asm
   </string>
   <key>settings</key>
   <dict>
     <key>showInSymbolList</key>
     <integer>1</integer>
     <key>symbolTransformation</key>
-    <string><![CDATA[/^/func /]]></string>
-    <!-- <key>showInIndexedSymbolList</key> -->
-    <!-- <integer>0</integer> -->
+    <string><![CDATA[/^/macro /]]></string>
   </dict>
 </dict>
 </plist>

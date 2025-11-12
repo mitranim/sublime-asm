@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+  <key>scope</key>
+  <string>
+    entity.name.function.asm,
+    meta.function.declaration.asm
+  </string>
+  <key>settings</key>
+  <dict>
+    <key>showInSymbolList</key>
+    <integer>1</integer>
+    <key>symbolTransformation</key>
+    <string><![CDATA[/^/func /]]></string>
+  </dict>
+</dict>
+</plist>

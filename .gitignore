@@ -1,0 +1,7 @@
+*
+.*
+!.*ignore
+!*.tmPreferences
+!*.sublime-*
+!*.md
+!unlicense
