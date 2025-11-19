@@ -12,6 +12,7 @@ variables:
   comment_line_begin: (?://|;)
   comment_block_begin: /\*
   comment_block_end: \*/
+  comment_directive: \b[[:alpha:]_-][[:alnum:]_-]*\b
 
   quote_single: \'
   quote_double: \"
@@ -58,6 +59,38 @@ contexts:
   # Many assemblers support both `//` and `;` comments.
   # The Go assembler supports `//` and forbids `;`.
   comment-line:
+    - include: comment-line-magic
+    - include: comment-line-normal
+
+  # The following was copied from `Go.sublime-syntax`.
+  #
+  # Go has magic comments in the form of:
+  #
+  # //go:directive arg0 arg1 ...
+  #
+  # These have been adopted outside the gc compiler for use in linting
+  # directives and pragmas for other compiler suites where they take the
+  # more generalised form of:
+  #
+  # //namespace:some_directive ...
+  #
+  # They're not part of the language spec, may not be recognized by some Go
+  # compilers, and may stop working in future releases. Therefore, highlighting
+  # them as compiler pragmas could be misleading. We scope them as plain
+  # comments by default, and add some detailed meta scopes for enterprising
+  # users wishing to add more color.
+  comment-line-magic:
+    - match: (//)([a-z]+[a-z-]*)(:)({{comment_directive}})([ ]?)
+      scope: meta.annotation.asm
+      captures:
+        1: punctuation.definition.comment.asm
+        2: meta.keyword.annotation.asm
+        3: meta.punctuation.accessor.colon.asm
+        4: meta.variable.function.asm
+        5: meta.punctuation.separator.space.asm
+      push: comment-line-pop
+
+  comment-line-normal:
     - match: '{{comment_line_begin}}'
       scope: punctuation.definition.comment.asm
       push: [comment-line-pop, comment-heading-pop]
