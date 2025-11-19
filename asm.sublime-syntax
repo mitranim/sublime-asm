@@ -369,7 +369,7 @@ contexts:
 
   num-delim-pop:
     - match: '{{ident_lax}}'
-      scope: invalid.illegal.mox
+      scope: invalid.illegal.asm
       pop: 1
     - match: ''
       pop: 1
